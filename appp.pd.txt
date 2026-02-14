@@ -1,9 +1,0 @@
-requritments . txt
-streamlit
-pandas
-numpy
-matplotlib
-seaborn
-scikit-learn
-scipy
-statsmodels
