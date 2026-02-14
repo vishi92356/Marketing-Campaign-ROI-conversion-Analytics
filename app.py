@@ -1,184 +1,55 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
-import re
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from scipy import stats
-import statsmodels.api as sm
+import numpy as np
 
-st.set_page_config(page_title="Marketing Campaign ROI Analytics", layout="wide")
+# Set the general aesthetic style
+plt.style.use('dark_background') # Using dark to make vibrant colors pop
+fig = plt.figure(figsize=(12, 8), facecolor='white')
 
-st.title("📊 Marketing Campaign ROI & Conversion Analytics App")
+# Colors based on your request
+LIME = '#32CD32'
+LIGHT_PINK = '#FFB6C1'
+VIBRANT_COLORS = ['#FF007F', '#00DFFF', '#7000FF', '#FFD700', '#00FF7F']
 
-# =========================
-# DATA GENERATION
-# =========================
-@st.cache_data
-def generate_dataset(n=1000):
-    np.random.seed(42)
+# --- 1. Header & Logo Placeholder ---
+plt.figtext(0.5, 0.92, "BOOST YOUR BRAND", fontsize=28, fontweight='bold', 
+            color=LIME, ha='center')
+plt.figtext(0.5, 0.87, "MARKETING CAMPAIGN STRATEGY", fontsize=14, 
+            color=LIGHT_PINK, ha='center', letterspacing=2)
 
-    channels = ['Facebook', 'Google', 'Instagram', 'Email', 'YouTube']
-    regions = ['North', 'South', 'East', 'West']
+# --- 2. Bar Chart (Vibrant Blue/Pink) ---
+ax1 = plt.subplot(2, 2, 3)
+categories = ['Jan', 'Feb', 'Mar', 'Apr', 'May']
+values = [45, 70, 55, 90, 80]
+bars = ax1.bar(categories, values, color=VIBRANT_COLORS)
+ax1.set_title("MONTHLY REACH", color=LIME, pad=15)
+ax1.tick_params(axis='both', colors=LIGHT_PINK)
 
-    data = pd.DataFrame({
-        'campaign_id': range(1, n+1),
-        'channel': np.random.choice(channels, n),
-        'region': np.random.choice(regions, n),
-        'spend': np.random.uniform(1000, 10000, n),
-        'clicks': np.random.randint(100, 5000, n),
-        'leads': np.random.randint(50, 1000, n),
-        'promo_code': np.random.choice(['PROMO10', 'SAVE20', 'NONE'], n)
-    })
+# --- 3. Line Graph (Vibrant Green) ---
+ax2 = plt.subplot(2, 2, 1)
+x = np.linspace(0, 10, 20)
+y = np.exp(x/5)
+ax2.plot(x, y, color='#00FF7F', marker='o', linewidth=3)
+ax2.set_title("CONVERSION GROWTH", color=LIME, pad=15)
+ax2.tick_params(axis='both', colors=LIGHT_PINK)
 
-    data['conversions'] = (data['leads'] * np.random.uniform(0.1, 0.4, n)).astype(int)
-    data['revenue'] = data['conversions'] * np.random.uniform(20, 150, n)
+# --- 4. Pie Chart (Multi-color) ---
+ax3 = plt.subplot(2, 2, 4)
+sizes = [40, 25, 20, 15]
+labels = ['Social', 'Email', 'Ads', 'Organic']
+ax3.pie(sizes, labels=labels, colors=VIBRANT_COLORS, startangle=140, 
+        textprops={'color': LIGHT_PINK})
+ax3.set_title("TRAFFIC SOURCE", color=LIME, pad=15)
 
-    return data
+# --- 5. Custom "M" Logo (Minimalist Geometric) ---
+ax4 = plt.subplot(2, 2, 2)
+ax4.axis('off')
+# Drawing a simple geometric 'M'
+m_x = [0.2, 0.3, 0.5, 0.7, 0.8]
+m_y = [0.3, 0.7, 0.5, 0.7, 0.3]
+ax4.plot(m_x, m_y, color=LIGHT_PINK, linewidth=8, solid_capstyle='round')
+ax4.fill(m_x, m_y, color=VIBRANT_COLORS[0], alpha=0.3)
+ax4.text(0.5, 0.1, "M-AGENCY", color=LIGHT_PINK, ha='center', fontsize=12)
 
-# =========================
-# FILE UPLOAD
-# =========================
-uploaded_file = st.file_uploader("Upload Marketing Dataset (CSV)", type=["csv"])
-
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-else:
-    df = generate_dataset()
-    st.info("Using Auto-Generated Sample Dataset (1000 rows)")
-
-# =========================
-# DATA CLEANING
-# =========================
-st.header("1️⃣ Data Cleaning")
-
-df.drop_duplicates(inplace=True)
-df.fillna(0, inplace=True)
-
-st.write("Dataset Shape:", df.shape)
-st.dataframe(df.head())
-
-# =========================
-# FEATURE ENGINEERING
-# =========================
-st.header("2️⃣ Feature Engineering")
-
-df['ROI'] = (df['revenue'] - df['spend']) / df['spend']
-df['CAC'] = df['spend'] / df['conversions'].replace(0, 1)
-df['Conversion_Rate'] = df['conversions'] / df['clicks']
-df['Promo_Used'] = df['promo_code'].apply(lambda x: 0 if x == "NONE" else 1)
-
-# Regex Example
-df['Valid_Promo'] = df['promo_code'].apply(
-    lambda x: 1 if re.match(r'^[A-Z]+\d+$', str(x)) else 0
-)
-
-st.dataframe(df.head())
-
-# =========================
-# NORMALIZATION
-# =========================
-st.header("3️⃣ Normalization")
-
-scaler = StandardScaler()
-num_cols = ['spend', 'clicks', 'leads', 'conversions', 'revenue']
-
-df_scaled = df.copy()
-df_scaled[num_cols] = scaler.fit_transform(df[num_cols])
-
-st.write("Normalized Sample:")
-st.dataframe(df_scaled.head())
-
-# =========================
-# BUSINESS QUESTION 1
-# =========================
-st.header("📌 Which channel generates highest ROI?")
-
-roi_channel = df.groupby('channel')['ROI'].mean().sort_values(ascending=False)
-st.write(roi_channel)
-
-fig, ax = plt.subplots()
-roi_channel.plot(kind='bar', ax=ax)
-plt.title("Average ROI by Channel")
-st.pyplot(fig)
-
-# =========================
-# BUSINESS QUESTION 2
-# =========================
-st.header("📌 Do promo-code customers convert better?")
-
-promo = df[df['Promo_Used']==1]['Conversion_Rate']
-nonpromo = df[df['Promo_Used']==0]['Conversion_Rate']
-
-t_stat, p_value = stats.ttest_ind(promo, nonpromo)
-
-st.write("Promo Avg Conversion:", promo.mean())
-st.write("Non-Promo Avg Conversion:", nonpromo.mean())
-st.write("T-test p-value:", p_value)
-
-if p_value < 0.05:
-    st.success("Promo users convert significantly better!")
-else:
-    st.warning("No significant difference detected.")
-
-# =========================
-# BUSINESS QUESTION 3
-# =========================
-st.header("📌 Overspending Campaigns")
-
-overspend = df[(df['spend'] > df['revenue'])]
-st.write("Number of Overspending Campaigns:", overspend.shape[0])
-st.dataframe(overspend.head())
-
-# =========================
-# BUSINESS QUESTION 4
-# =========================
-st.header("📌 Acquisition Cost across Channels")
-
-cac_channel = df.groupby('channel')['CAC'].mean()
-st.write(cac_channel)
-
-fig2, ax2 = plt.subplots()
-cac_channel.plot(kind='bar', ax=ax2)
-plt.title("CAC by Channel")
-st.pyplot(fig2)
-
-# =========================
-# BUSINESS QUESTION 5
-# =========================
-st.header("📌 Best Performing Region")
-
-region_roi = df.groupby('region')['ROI'].mean()
-st.write(region_roi)
-
-fig3, ax3 = plt.subplots()
-region_roi.plot(kind='bar', ax=ax3)
-plt.title("ROI by Region")
-st.pyplot(fig3)
-
-# =========================
-# REGRESSION MODEL
-# =========================
-st.header("📈 Revenue Prediction Model")
-
-X = df[['spend','clicks','leads','Promo_Used']]
-y = df['revenue']
-
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=42)
-
-model = LinearRegression()
-model.fit(X_train,y_train)
-
-score = model.score(X_test,y_test)
-
-st.write("Model R² Score:", score)
-
-# Statsmodels summary
-X2 = sm.add_constant(X)
-est = sm.OLS(y, X2).fit()
-st.text(est.summary())
-
-st.success("Application Ready for Deployment 🚀")
+# Final Layout Adjustments
+plt.tight_layout(rect=[0, 0.03, 1, 0.85])
+plt.show()
